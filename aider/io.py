@@ -76,8 +76,13 @@ def with_history_disabled(func):
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
+        if self.prompt_session is None:
+            return func(self, *args, **kwargs)
+
         orig_buf_append = self.prompt_session.default_buffer.append_to_history
-        self.prompt_session.default_buffer.append_to_history = lambda: None  # Replace with no-op
+        self.prompt_session.default_buffer.append_to_history = lambda: (
+            None
+        )  # Replace with no-op
 
         try:
             return func(self, *args, **kwargs)
@@ -93,8 +98,6 @@ class CommandCompletionException(Exception):
     """Raised when a command should use the normal autocompleter instead of
     command-specific completion."""
 
-    pass
-
 
 @dataclass
 class ConfirmGroup:
@@ -108,7 +111,13 @@ class ConfirmGroup:
 
 class AutoCompleter(Completer):
     def __init__(
-        self, root, rel_fnames, addable_rel_fnames, commands, encoding, abs_read_only_fnames=None
+        self,
+        root,
+        rel_fnames,
+        addable_rel_fnames,
+        commands,
+        encoding,
+        abs_read_only_fnames=None,
     ):
         self.addable_rel_fnames = addable_rel_fnames
         self.rel_fnames = rel_fnames
@@ -160,7 +169,9 @@ class AutoCompleter(Completer):
 
             tokens = list(lexer.get_tokens(content))
             self.words.update(
-                (token[1], f"`{token[1]}`") for token in tokens if token[0] in Token.Name
+                (token[1], f"`{token[1]}`")
+                for token in tokens
+                if token[0] in Token.Name
             )
 
     def get_command_completions(self, document, complete_event, text, words):
@@ -215,7 +226,9 @@ class AutoCompleter(Completer):
 
         if text[0] == "/":
             try:
-                yield from self.get_command_completions(document, complete_event, text, words)
+                yield from self.get_command_completions(
+                    document, complete_event, text, words
+                )
                 return
             except CommandCompletionException:
                 # Fall through to normal completion
@@ -223,7 +236,9 @@ class AutoCompleter(Completer):
 
         candidates = self.words
         candidates.update(set(self.fname_to_rel_fnames))
-        candidates = [word if type(word) is tuple else (word, word) for word in candidates]
+        candidates = [
+            word if type(word) is tuple else (word, word) for word in candidates
+        ]
 
         last_word = words[-1]
 
@@ -299,11 +314,17 @@ class InputOutput:
             pretty = False
 
         self.user_input_color = ensure_hash_prefix(user_input_color) if pretty else None
-        self.tool_output_color = ensure_hash_prefix(tool_output_color) if pretty else None
+        self.tool_output_color = (
+            ensure_hash_prefix(tool_output_color) if pretty else None
+        )
         self.tool_error_color = ensure_hash_prefix(tool_error_color) if pretty else None
-        self.tool_warning_color = ensure_hash_prefix(tool_warning_color) if pretty else None
+        self.tool_warning_color = (
+            ensure_hash_prefix(tool_warning_color) if pretty else None
+        )
         self.assistant_output_color = ensure_hash_prefix(assistant_output_color)
-        self.completion_menu_color = ensure_hash_prefix(completion_menu_color) if pretty else None
+        self.completion_menu_color = (
+            ensure_hash_prefix(completion_menu_color) if pretty else None
+        )
         self.completion_menu_bg_color = (
             ensure_hash_prefix(completion_menu_bg_color) if pretty else None
         )
@@ -340,7 +361,11 @@ class InputOutput:
                 f"Must be one of: {', '.join(valid_line_endings)}"
             )
         self.newline = (
-            None if line_endings == "platform" else "\n" if line_endings == "lf" else "\r\n"
+            None
+            if line_endings == "platform"
+            else "\n"
+            if line_endings == "lf"
+            else "\r\n"
         )
         self.dry_run = dry_run
 
@@ -375,7 +400,9 @@ class InputOutput:
         else:
             self.console = Console(force_terminal=False, no_color=True)  # non-pretty
             if self.is_dumb_terminal:
-                self.tool_output("Detected dumb terminal, disabling fancy input and pretty output.")
+                self.tool_output(
+                    "Detected dumb terminal, disabling fancy input and pretty output."
+                )
 
         self.file_watcher = file_watcher
         self.root = root
@@ -436,7 +463,9 @@ class InputOutput:
         if self.completion_menu_current_bg_color:
             completion_menu_current_style.append(self.completion_menu_current_bg_color)
         if self.completion_menu_current_color:
-            completion_menu_current_style.append(f"bg:{self.completion_menu_current_color}")
+            completion_menu_current_style.append(
+                f"bg:{self.completion_menu_current_color}"
+            )
         if completion_menu_current_style:
             style_dict["completion-menu.completion.current"] = " ".join(
                 completion_menu_current_style
@@ -502,7 +531,9 @@ class InputOutput:
         delay = initial_delay
         for attempt in range(max_retries):
             try:
-                with open(str(filename), "w", encoding=self.encoding, newline=self.newline) as f:
+                with open(
+                    str(filename), "w", encoding=self.encoding, newline=self.newline
+                ) as f:
                     f.write(content)
                 return  # Successfully wrote the file
             except PermissionError as err:
@@ -520,7 +551,9 @@ class InputOutput:
 
     def rule(self):
         if self.pretty:
-            style = dict(style=self.user_input_color) if self.user_input_color else dict()
+            style = (
+                dict(style=self.user_input_color) if self.user_input_color else dict()
+            )
             self.console.rule(**style)
         else:
             print()
@@ -635,7 +668,9 @@ class InputOutput:
                 # In normal mode, Enter submits
                 event.current_buffer.validate_and_handle()
 
-        @kb.add("escape", "enter", eager=True, filter=~is_searching)  # This is Alt+Enter
+        @kb.add(
+            "escape", "enter", eager=True, filter=~is_searching
+        )  # This is Alt+Enter
         def _(event):
             "Handle Alt+Enter key press"
             if self.multiline_mode:
@@ -898,11 +933,15 @@ class InputOutput:
                     res = default
                     break
                 res = res.lower()
-                good = any(valid_response.startswith(res) for valid_response in valid_responses)
+                good = any(
+                    valid_response.startswith(res) for valid_response in valid_responses
+                )
                 if good:
                     break
 
-                error_message = f"Please answer with one of: {', '.join(valid_responses)}"
+                error_message = (
+                    f"Please answer with one of: {', '.join(valid_responses)}"
+                )
                 self.tool_error(error_message)
 
         res = res.lower()[0]
@@ -975,7 +1014,9 @@ class InputOutput:
         if message.strip():
             if "\n" in message:
                 for line in message.splitlines():
-                    self.append_chat_history(line, linebreak=True, blockquote=True, strip=strip)
+                    self.append_chat_history(
+                        line, linebreak=True, blockquote=True, strip=strip
+                    )
             else:
                 hist = message.strip() if strip else message
                 self.append_chat_history(hist, linebreak=True, blockquote=True)
@@ -1026,7 +1067,9 @@ class InputOutput:
 
     def assistant_output(self, message, pretty=None):
         if not message:
-            self.tool_warning("Empty response received from LLM. Check your provider account?")
+            self.tool_warning(
+                "Empty response received from LLM. Check your provider account?"
+            )
             return
 
         show_resp = message
@@ -1066,9 +1109,7 @@ class InputOutput:
             if shutil.which("terminal-notifier"):
                 return f"terminal-notifier -title 'Aider' -message '{NOTIFICATION_MESSAGE}'"
             # Fall back to osascript
-            return (
-                f'osascript -e \'display notification "{NOTIFICATION_MESSAGE}" with title "Aider"\''
-            )
+            return f'osascript -e \'display notification "{NOTIFICATION_MESSAGE}" with title "Aider"\''
         elif system == "Linux":
             # Check for common Linux notification tools
             for cmd in ["notify-send", "zenity"]:
@@ -1099,7 +1140,9 @@ class InputOutput:
                     )
                     if result.returncode != 0 and result.stderr:
                         error_msg = result.stderr.decode("utf-8", errors="replace")
-                        self.tool_warning(f"Failed to run notifications command: {error_msg}")
+                        self.tool_warning(
+                            f"Failed to run notifications command: {error_msg}"
+                        )
                 except Exception as e:
                     self.tool_warning(f"Failed to run notifications command: {e}")
             else:
@@ -1131,10 +1174,14 @@ class InputOutput:
             text += "\n"
         if self.chat_history_file is not None:
             try:
-                with self.chat_history_file.open("a", encoding=self.encoding, errors="ignore") as f:
+                with self.chat_history_file.open(
+                    "a", encoding=self.encoding, errors="ignore"
+                ) as f:
                     f.write(text)
             except (PermissionError, OSError) as err:
-                print(f"Warning: Unable to write to chat history file {self.chat_history_file}.")
+                print(
+                    f"Warning: Unable to write to chat history file {self.chat_history_file}."
+                )
                 print(err)
                 self.chat_history_file = None  # Disable further attempts to write
 
@@ -1156,7 +1203,9 @@ class InputOutput:
         console = Console(file=output, force_terminal=False)
 
         read_only_files = sorted(rel_read_only_fnames or [])
-        editable_files = [f for f in sorted(rel_fnames) if f not in rel_read_only_fnames]
+        editable_files = [
+            f for f in sorted(rel_fnames) if f not in rel_read_only_fnames
+        ]
 
         if read_only_files:
             # Use shorter of abs/rel paths for readonly files
@@ -1167,7 +1216,9 @@ class InputOutput:
 
             files_with_label = ["Readonly:"] + ro_paths
             read_only_output = StringIO()
-            Console(file=read_only_output, force_terminal=False).print(Columns(files_with_label))
+            Console(file=read_only_output, force_terminal=False).print(
+                Columns(files_with_label)
+            )
             read_only_lines = read_only_output.getvalue().splitlines()
             console.print(Columns(files_with_label))
 
@@ -1176,7 +1227,9 @@ class InputOutput:
             if read_only_files:
                 files_with_label = ["Editable:"] + editable_files
                 editable_output = StringIO()
-                Console(file=editable_output, force_terminal=False).print(Columns(files_with_label))
+                Console(file=editable_output, force_terminal=False).print(
+                    Columns(files_with_label)
+                )
                 editable_lines = editable_output.getvalue().splitlines()
 
                 if len(read_only_lines) > 1 or len(editable_lines) > 1:
