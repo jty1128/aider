@@ -236,6 +236,12 @@ class ModelInfoManager:
                     print(str(ex))
 
         if litellm_info:
+            # Apply local metadata overrides on top of litellm info so that
+            # project-supplied corrections (e.g. max_input_tokens, supports_vision)
+            # take priority over litellm data.
+            local_info = self.local_model_metadata.get(model)
+            if local_info:
+                return {**litellm_info, **local_info}
             return litellm_info
 
         if not cached_info and model.startswith("openrouter/"):
