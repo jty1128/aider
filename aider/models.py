@@ -218,20 +218,30 @@ class ModelInfoManager:
         return dict()
 
     def get_model_info(self, model):
-        cached_info = self.get_model_from_cached_json_db(model)
+        # Check local metadata first (highest priority - user/project overrides)
+        data = self.local_model_metadata.get(model)
+        if data:
+            return data
 
+        # Try litellm's bundled data next (matches the installed litellm version,
+        # avoiding inconsistencies with the GitHub cache which tracks main branch)
         litellm_info = None
-        if litellm._lazy_module or not cached_info:
-            try:
-                litellm_info = litellm.get_model_info(model)
-            except Exception as ex:
-                if "model_prices_and_context_window.json" not in str(ex):
-                    print(str(ex))
+        try:
+            litellm_info = litellm.get_model_info(model)
+        except Exception as ex:
+            if "model_prices_and_context_window.json" not in str(ex):
+                print(str(ex))
 
         if litellm_info:
             return litellm_info
 
-        if not cached_info and model.startswith("openrouter/"):
+        # Fall back to cached GitHub data (may include newer models not yet
+        # in the installed litellm version)
+        cached_info = self.get_model_from_cached_json_db(model)
+        if cached_info:
+            return cached_info
+
+        if model.startswith("openrouter/"):
             openrouter_info = self.fetch_openrouter_model_info(model)
             if openrouter_info:
                 return openrouter_info

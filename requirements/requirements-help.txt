@@ -232,7 +232,7 @@ safetensors==0.5.3
     # via
     #   -c requirements/common-constraints.txt
     #   transformers
-scikit-learn==1.6.1
+scikit-learn==1.5.2
     # via
     #   -c requirements/common-constraints.txt
     #   sentence-transformers
