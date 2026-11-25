@@ -220,13 +220,16 @@ class ModelInfoManager:
     def get_model_info(self, model):
         cached_info = self.get_model_from_cached_json_db(model)
 
+        # Local metadata takes precedence over litellm lookups
+        if model in self.local_model_metadata:
+            return cached_info
+
         litellm_info = None
-        if litellm._lazy_module or not cached_info:
-            try:
-                litellm_info = litellm.get_model_info(model)
-            except Exception as ex:
-                if "model_prices_and_context_window.json" not in str(ex):
-                    print(str(ex))
+        try:
+            litellm_info = litellm.get_model_info(model)
+        except Exception as ex:
+            if "model_prices_and_context_window.json" not in str(ex):
+                print(str(ex))
 
         if litellm_info:
             return litellm_info
