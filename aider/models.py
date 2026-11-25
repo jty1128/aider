@@ -156,6 +156,20 @@ class ModelInfoManager:
         # Manager for the cached OpenRouter model database
         self.openrouter_manager = OpenRouterModelManager()
 
+        # Load bundled model metadata so it is available even when the
+        # full application entry point (which calls
+        # register_litellm_models) is not used – e.g. in unit tests
+        # that instantiate Model directly.
+        try:
+            with importlib.resources.open_text(
+                "aider.resources", "model-metadata.json"
+            ) as f:
+                _bundled = json5.loads(f.read())
+                if _bundled:
+                    self.local_model_metadata.update(_bundled)
+        except Exception:
+            pass
+
     def set_verify_ssl(self, verify_ssl):
         self.verify_ssl = verify_ssl
         if hasattr(self, "openrouter_manager"):
